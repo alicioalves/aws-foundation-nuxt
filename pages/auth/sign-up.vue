@@ -29,6 +29,8 @@
           <UButton type="submit" label="Sign up" block />
         </UForm>
       </section>
+      Already have an account? Sign-in
+      <NuxtLink to="/auth/sign-in"> here </NuxtLink>
     </UCard>
   </div>
 </template>
