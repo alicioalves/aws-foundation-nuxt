@@ -3,16 +3,7 @@ import type { CognitoIdentityServiceProvider } from 'aws-sdk'
 import cognitoServiceProvider from '~/server/aws-services/cognito'
 import crypto from 'crypto'
 
-function generateSecretHash(
-  username: string,
-  clientId: string,
-  clientSecret: string
-): string {
-  return crypto
-    .createHmac('SHA256', clientSecret)
-    .update(username + clientId)
-    .digest('base64')
-}
+import generateSecretHash from '~/server/utils/hash'
 
 export default defineEventHandler(async (event) => {
   const { name, email, password } = await readBody(event)
