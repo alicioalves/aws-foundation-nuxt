@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  TemplateBucketName:
+    Type: String
+    Default: [bucket-name]
+
+  Prefix:
+    Type: String
+    Default: aa-1
+
+  BranchName:
+    Type: String
+    Default: master
+
+  AvailabilityZone1:
+    Type: String
+    Default: a
+
+   DBMasterUsername:
+    Type: String
+    Default: postgres
+    
+  DBMasterUserPassword:
+    Type: String
+    Default: Secret123456@
+    
+  DBName:
+    Type: String
+    Default: database
+
+  HTTPSPort:
+    Type: Number
+    Default: 443
+
+  Runtime:
+    Type: String
+    Default: nodejs20.x
+  
+  Timeout:
+    Type: Number
+    Default: 30
+
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplateBucketName}.s3.${AWS::Region}.amazonaws.com/${Prefix}/${Prefix}-vpc.yaml'
+      Parameters:
+        AvailabilityZone: a
+        CidrIp: 10.0.1.0/24
+        HTTPSPort: 443
+        Prefix: !Ref Prefix
+        VPCCidrBlock: 10.0.0.0/16
+
+  RDSStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplateBucketName}.s3.${AWS::Region}.amazonaws.com/${Prefix}/${Prefix}-lambda.yaml'
+      Parameters:
+        AvailabilityZone: !Ref AvailabilityZone1
+        DBAllocatedStorage: 20
+        DBEngine: postgres
+        DBEngineVersion: 16.1-R2
+        DBInstanceClass: db.t3.micro
+        DBInstanceIdentifier: !Sub "${Prefix}-dbinstance" 
+        DBName: !Ref DBName
+        DBMasterUsername: !Ref DBMasterUsername
+        DBMasterUserPassword: !Ref DBMasterUserPassword
+        DBSecurityGroup: !GetAtt VPCStack.Outputs.DBSecurityGroup
+        DBSubnet1: !GetAtt VPCStack.Outputs.DBSubnet1
+        DBSubnet2: !GetAtt VPCStack.Outputs.DBSubnet2
+        IdleClientTimeout: 120
+        Prefix: !Ref Prefix
+    
+  LambdaStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub "https://${TemplateBucketName}.s3.${AWS::Region}.amazonaws.com/${Prefix}/${Prefix}-lambda.yaml"
+      Parameters:
+        CodeS3Bucket: !Ref TemplateBucketName
+        CodeS3Key: !Sub "${Prefix}/deploy.zip"
+        FunctionSecurityGroup: !GetAtt VPCStack.Outputs.FunctionSecurityGroup
+        FunctionSubnet: !GetAtt VPCStack.Outputs.FunctionSubnet
+        Prefix: !Ref Prefix
+        Runtime: !Ref Runtime
+        Timeout: !Ref Timeout
+
+
+  CodeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplateBucketName}.s3.${AWS::Region}.amazonaws.com/${Prefix}/${Prefix}-code.yaml'
+      Parameters:
+        BranchName: !Ref BranchName
+        Prefix: !Ref Prefix
+
+  AmplifyStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - CodeStack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplateBucketName}.s3.${AWS::Region}.amazonaws.com/${Prefix}/${Prefix}-amplify.yaml'
+      Parameters:
+        BranchName: !Ref BranchName
+        CodeCommitRepositoryArn: !GetAtt CodeStack.Outputs.CodeCommitRepositoryArn
+        CodeCommitRepositoryCloneUrlHttp: !GetAtt CodeStack.Outputs.CodeCommitRepositoryCloneUrlHttp
+        Prefix: !Ref Prefix

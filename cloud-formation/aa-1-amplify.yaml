@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS Amplify setup for a Nuxt3 Application
+
+Parameters:
+  BranchName:
+    Type: String
+
+  CodeCommitRepositoryArn:
+    Type: String
+
+  CodeCommitRepositoryCloneUrlHttp:
+    Type: String
+
+  Prefix:
+    Type: String
+
+Resources:
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      BuildSpec: |
+        version: 1
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - nvm use 18 && node --version
+                - corepack enable
+                - npx --yes nypm install
+                - npm install -g dotenv-cli
+                - env | grep -e DATABASE_URL >> .env.$AMPLIFY_ENVIRONMENT
+                - dotenv -e .env.$AMPLIFY_ENVIRONMENT -- pnpm db:generate
+
+            build:
+              commands:
+                - pnpm build
+          artifacts:
+            baseDirectory: .amplify-hosting
+            files:
+              - "**/*"
+      EnableAuthBranchDeletion: false
+      IAMServiceRole: !GetAtt AppRole.Arn
+      Name: !Ref Prefix
+      Platform: Web compute
+      Repository: !Ref CodeCommitRepositoryCloneUrlHttp
+
+    Branch:
+      Type: AWS::Amplify::Branch
+      Properties:
+        AppId: !GetAtt App.AppId
+        BranchName: !Ref BranchName
+        EnableAutoBuild: true
+        EnablePerformanceMode: false
+        EnablePullRequestPreview: true
+        Framework: Nuxt.js
+        Stage: PRODUCTION
+
+    AppRole:
+      Type: AWS::IAM::Role
+      DeletionPolicy: Delete
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - amplify.amazonaws.com
+                Action:
+                  - sts:AssumeRole
+        Policies:
+          - PolicyName: CloudFormationDeployPolicy
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/amplify/*:log-stream:*'
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                  Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/amplify/*'
+                - Effect: Allow
+                  Action:
+                    - codecommit:GitPull
+                  Resource: !Ref CodeCommitRepositoryArn

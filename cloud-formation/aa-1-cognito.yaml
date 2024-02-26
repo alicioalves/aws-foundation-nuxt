@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Cognito User Pool with Custom Auth (OTP) for regular users.
+
+Parameters:
+  CognitoDomain:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?$
+    Description: Enter a string. Must be alpha numeric 3-63 in length.
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: UserPool
+      UsernameConfiguration:
+        CaseSensitive: false
+      UsernameAttributes:
+        - email
+      Policies:
+        # This is only to satisfy Cognito requirements
+        # The password is auto-generated during sign-up
+        PasswordPolicy:
+          MinimumLength: 16
+          RequireLowerCase: true
+          RequireNumbers: true
+          RequireUpperCase: true
+          RequireSymbols: true
+      SelfSignUpEnabled: true
+      MfaConfiguration: OPTIONAL
+      EnabledMfas: SOFTWARE_TOKEN_MFA
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          Name: verified_email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: phone-number
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+        - Name: custom:company_name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      LambdaConfig:
+        PreSignUp: !GetAtt PreSignUpLambdaFunction.Arn
+        DefineAuthChallenge: !GetAtt DefineAuthChallengeLambdaFunction.Arn
+        CreateAuthChallenge: !GetAtt CreateAuthChallengeLambdaFunction.Arn
+        VerifyAuthChallenge: !GetAtt VerifyAuthChallengeLambdaFunction.Arn
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: TestAPI
+      GenerateSecret: true
+      UserPoolId: !Ref UserPool
+      ExplicitAuthFlows:
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+  SesEmailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties: EmailA

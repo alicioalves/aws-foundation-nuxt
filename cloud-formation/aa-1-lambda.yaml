@@ -1,0 +1,196 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  CodeS3Bucket:
+    Type: String
+
+  CodeS3Key:
+    Type: String
+
+  Runtime:
+    Type: String
+
+  Timeout:
+    Type: String
+
+  FunctionSecurityGroup:
+    Type: String
+
+  FunctionSubnet:
+    Type: String
+
+  SesFromAddress:
+    Type: String
+
+Resources:
+  PreSignUp:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref CodeS3Bucket
+        S3Key: !Ref CodeS3Key
+      FunctionName: !Sub '${Prefix}-preSignUp'
+      Runtime: !Ref Runtime
+      Role: !GetAtt PreSignUpRole.Arn
+      Timeout: !Ref Timeout
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FunctionSecurityGroup
+        SubnetIds:
+          - !Ref FunctionSubnet
+
+  DefineAuthChallenge:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref CodeS3Bucket
+        S3Key: !Ref CodeS3Key
+      FunctionName: !Sub '${Prefix}-defineAuthChallenge'
+      Runtime: !Ref Runtime
+      Role: !GetAtt DefineAuthChallengeRole.Arn
+      Timeout: !Ref Timeout
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FunctionSecurityGroup
+        SubnetIds:
+          - !Ref FunctionSubnet
+
+  CreateAuthChallenge:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref CodeS3Bucket
+        S3Key: !Ref CodeS3Key
+      FunctionName: !Sub '${Prefix}-createAuthChallenge'
+      Runtime: !Ref Runtime
+      Role: !GetAtt CreateAuthChallengeRole.Arn
+      Timeout: !Ref Timeout
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FunctionSecurityGroup
+        SubnetIds:
+          - !Ref FunctionSubnet
+      Environment:
+        Variables:
+          SES_FROM_ADDRESS: !Ref SesFromAddress
+
+  VerifyAuthChallenge:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref CodeS3Bucket
+        S3Key: !Ref CodeS3Key
+      FunctionName: !Sub '${Prefix}-verifyAuthChallenge'
+      Runtime: !Ref Runtime
+      Role: !GetAtt VerifyAuthChallengeRole.Arn
+      Timeout: !Ref Timeout
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref FunctionSecurityGroup
+        SubnetIds:
+          - !Ref FunctionSubnet
+
+  PreSignUpRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        Policies:
+          - PolicyName: PreSignUpLambdaPermissions
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: arn:aws:logs:*:*:*
+
+  DefineAuthChallengeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        Policies:
+          - PolicyName: PreSignUpLambdaPermissions
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: arn:aws:logs:*:*:*
+
+  CreateAuthChallengeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        Policies:
+          - PolicyName: PreSignUpLambdaPermissions
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: arn:aws:logs:*:*:*
+                - Effect: 'Allow'
+                  Action:
+                    - 'ses:SendEmail'
+                    - 'ses:SendRawEmail'
+                  Resource: '*'
+
+  VerifyAuthChallengeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        Policies:
+          - PolicyName: PreSignUpLambdaPermissions
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: arn:aws:logs:*:*:*

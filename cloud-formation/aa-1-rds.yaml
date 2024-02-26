@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  AvailabilityZone:
+    Type: String
+
+  DBAllocatedStorage:
+    Type: Number
+
+  DBEngine:
+    Type: String
+
+  DBEngineVersion:
+    Type: String
+
+  DBInstanceClass:
+    Type: String
+
+  DBInstanceIdentifier:
+    Type: String
+
+  DBName:
+    Type: String
+
+  DBMasterUsername:
+    Type: String
+
+  DBMasterUserPassword:
+    Type: String
+
+  DBSecurityGroup:
+    Type: String
+
+  DBSubnet1:
+    Type: String
+
+  DBSubnet2:
+    Type: String
+
+  Prefix:
+    Type: String
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub '${Prefix}-DBSubnetGroup'
+      DBSubnetGroupDescription: DBSubnet Group.
+      SubnetIds:
+        - !Ref DBSubnet1
+        - !Ref DBSubnet2
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref DBAllocatedStorage
+      AvailabilityZone: !Sub '${AWS::Region}${AvailabilityZone}'
+      DBInstanceClass: !Ref DBInstanceClass
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      DBName: !Ref DBName
+      DBSubnetGroupName: !Ref DBSubnetGrout
+      Engine: !Ref DBEngine
+      EngineVersion: !Ref DBEngineVersion
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterUserPassword
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+
+  Secret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${Prefix}-Secret'
+      SecretString: !Sub '{"username":"${DBMasterUsername}","password":"${DBMasterUserPassword}"}'

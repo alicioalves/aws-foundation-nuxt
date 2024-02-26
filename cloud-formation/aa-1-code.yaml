@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  BranchName:
+    Type: String
+
+  Prefix:
+    Type: String
+
+Resources:
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: !Ref Prefix
+
+Outputs:
+  CodeCommitRepositoryArn:
+    Value: !GetAtt CodeCommitRepository.Arn
+
+  CodeCommitRepositoryCloneUrlHttp:
+    Value: !GetAtt CodeCommitRepository.CloneHttpUrl
